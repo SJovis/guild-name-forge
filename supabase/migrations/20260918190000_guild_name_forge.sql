@@ -17,6 +17,7 @@ alter table public.guild_names enable row level security;
 alter table public.guild_votes enable row level security;
 create policy "Anyone can read rankings" on public.guild_names for select to anon, authenticated using (true);
 revoke all on public.guild_names, public.guild_votes from anon, authenticated;
+grant select on public.guild_names to anon, authenticated;
 
 create or replace function public.suggest_guild_name(p_display_name text)
 returns table(guild_name_id bigint, display_name text, votes integer, outcome text)
