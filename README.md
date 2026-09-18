@@ -4,7 +4,7 @@ A Discord-authenticated, shared guild-name ballot built as a static Next.js expo
 
 ## Setup
 
-1. Create a Supabase project and run `supabase/migrations/20260918190000_guild_name_forge.sql` in its SQL Editor (or apply it with the Supabase CLI).
+1. Create a Supabase project and apply every SQL file in `supabase/migrations/` in timestamp order (or apply them with the Supabase CLI). The database must include `suggest_guild_name` before signed-in visitors can submit names.
 2. Create a Discord application in the [Discord Developer Portal](https://discord.com/developers). In its OAuth2 redirects, add `https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback`.
 3. In Supabase **Authentication → Sign In / Providers → Discord**, enable Discord and enter the Discord application's client ID and client secret. Keep the secret only in Supabase, never in this repository or browser configuration.
 4. In Supabase **Authentication → URL Configuration**, set the Site URL and add redirect URLs for `http://localhost:3000/` and `https://SJovis.github.io/guild-name-forge/`.

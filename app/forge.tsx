@@ -6,6 +6,14 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 type GuildName = { id: number; display_name: string; votes: number; created_at: string };
 type Mutation = { guild_name_id: number; display_name: string; votes: number; outcome: "created" | "voted" | "already_voted" | "not_found" };
 
+function suggestionErrorMessage(error: { code: string } | null) {
+  if (error?.code === "28000") return "Your Discord sign-in has expired. Sign in again, then retry.";
+  if (error?.code === "42501" || error?.code === "PGRST202") {
+    return "Suggestions are not enabled in the database yet. Apply the Supabase guild-name migration, then retry.";
+  }
+  return "The name could not be saved. Your suggestion is still in the anvil—please retry.";
+}
+
 function clearOAuthCallback() {
   const parameters = new URLSearchParams(window.location.search);
   const hasOAuthCallback = window.location.hash.includes("access_token") || parameters.has("code");
@@ -131,7 +139,10 @@ export function Forge() {
     setMessage("");
     const { data, error } = await supabase.rpc("suggest_guild_name", { p_display_name: displayName });
     setPending(null);
-    if (error || !data?.[0]) return setMessage("The name could not be saved. Your suggestion is still in the anvil—please retry.");
+    if (error || !data?.[0]) {
+      if (error) console.error("Could not suggest guild name:", error);
+      return setMessage(suggestionErrorMessage(error));
+    }
     if (applyMutation(data[0] as Mutation, now || updatedAt?.getTime() || 0)) setName("");
   };
 
