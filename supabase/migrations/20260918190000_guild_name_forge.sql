@@ -41,7 +41,8 @@ begin
   insert into public.guild_names (display_name, normalized_name)
   values (v_display_name, v_normalized_name)
   on conflict (normalized_name) do update set normalized_name = excluded.normalized_name
-  returning *, (xmax = 0) into v_name, v_created;
+  returning id, display_name, normalized_name, votes, created_at, (xmax = 0)
+  into v_name.id, v_name.display_name, v_name.normalized_name, v_name.votes, v_name.created_at, v_created;
   insert into public.guild_votes (guild_name_id, user_id) values (v_name.id, v_user_id)
   on conflict do nothing returning true into v_vote_added;
   if coalesce(v_vote_added, false) then
