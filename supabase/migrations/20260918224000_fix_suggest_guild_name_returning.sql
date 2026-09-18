@@ -31,3 +31,27 @@ begin
     case when not coalesce(v_vote_added, false) then 'already_voted' when v_created then 'created' else 'voted' end;
 end;
 $$;
+
+create or replace function public.vote_for_guild_name(p_guild_name_id bigint)
+returns table(guild_name_id bigint, display_name text, votes integer, outcome text)
+language plpgsql security definer set search_path = ''
+as $$
+declare v_name public.guild_names%rowtype; v_vote_added boolean; v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then raise exception 'Sign in is required to vote' using errcode = '28000'; end if;
+  select * into v_name from public.guild_names where id = p_guild_name_id for update;
+  if not found then return query select p_guild_name_id, ''::text, 0, 'not_found'::text; return; end if;
+  insert into public.guild_votes (guild_name_id, user_id) values (v_name.id, v_user_id)
+  on conflict do nothing returning true into v_vote_added;
+  if coalesce(v_vote_added, false) then update public.guild_names set votes = votes + 1 where id = v_name.id returning * into v_name; end if;
+  return query select v_name.id, v_name.display_name, v_name.votes, case when coalesce(v_vote_added, false) then 'voted' else 'already_voted' end;
+end;
+$$;
+
+create or replace function public.get_my_vote_ids()
+returns table(guild_name_id bigint)
+language sql security definer set search_path = ''
+as $$ select v.guild_name_id from public.guild_votes v where v.user_id = auth.uid(); $$;
+
+revoke all on function public.suggest_guild_name(text), public.vote_for_guild_name(bigint), public.get_my_vote_ids() from public, anon, authenticated;
+grant execute on function public.suggest_guild_name(text), public.vote_for_guild_name(bigint), public.get_my_vote_ids() to authenticated;
