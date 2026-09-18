@@ -6,6 +6,15 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 type GuildName = { id: number; display_name: string; votes: number; created_at: string };
 type Mutation = { guild_name_id: number; display_name: string; votes: number; outcome: "created" | "voted" | "already_voted" | "not_found" };
 
+function clearOAuthCallback() {
+  const parameters = new URLSearchParams(window.location.search);
+  const hasOAuthCallback = window.location.hash.includes("access_token") || parameters.has("code");
+  if (!hasOAuthCallback) return;
+  parameters.delete("code");
+  const query = parameters.toString();
+  window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+}
+
 function Swords() {
   return <svg aria-hidden="true" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m18 14 32 32M46 14 14 46M16 12l8 2-4 8M48 12l-8 2 4-8M16 52l8-2-4-8M48 52l-8-2 4-8" /></svg>;
 }
@@ -26,7 +35,7 @@ export function Forge() {
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-    return url && key ? createClient(url, key) : null;
+    return url && key ? createClient(url, key, { auth: { detectSessionInUrl: true, flowType: "pkce" } }) : null;
   }, []);
 
   const refresh = useCallback(async () => {
@@ -66,10 +75,12 @@ export function Forge() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setAuthReady(true);
+      if (session) clearOAuthCallback();
     });
     void supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       setAuthReady(true);
+      if (data.session) clearOAuthCallback();
     });
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
